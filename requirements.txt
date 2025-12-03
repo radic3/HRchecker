@@ -1,5 +1,3 @@
-pandas==2.2.0
-numpy==2.0.0
-scipy==1.13.0
-openpyxl==3.1.2
-
+# Nessuna dipendenza richiesta per il server HTTP
+# Il server usa solo la standard library Python
+# La dashboard è puro HTML/JavaScript (client-side)
