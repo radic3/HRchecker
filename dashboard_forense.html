@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Forense HR - Analisi Manipolazioni</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 5px solid #7f1d1d;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .alert-banner {
+            background: #fef3c7;
+            border-left: 5px solid #f59e0b;
+            padding: 15px 30px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .alert-banner .icon {
+            font-size: 2em;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f3f4f6;
+            border-bottom: 2px solid #e5e7eb;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 20px 30px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+        
+        .tab:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .tab.active {
+            color: #dc2626;
+            border-bottom-color: #dc2626;
+            background: white;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(220, 38, 38, 0.3);
+        }
+        
+        .stat-card .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        
+        .evidence-box {
+            background: #fef2f2;
+            border: 2px solid #dc2626;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .evidence-box.warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        
+        .evidence-box.safe {
+            background: #f0fdf4;
+            border-color: #22c55e;
+        }
+        
+        .evidence-box h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        .alert-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .alert-badge.danger {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        
+        .alert-badge.warning {
+            background: #fde68a;
+            color: #92400e;
+        }
+        
+        .alert-badge.safe {
+            background: #bbf7d0;
+            color: #166534;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+        }
+        
+        .formula-box {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .highlight-row {
+            background: #fef2f2 !important;
+            font-weight: 600;
+        }
+        
+        .methodology {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .methodology h4 {
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        
+        .methodology ul {
+            margin-left: 20px;
+        }
+        
+        .methodology li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 DASHBOARD FORENSE HR</h1>
+            <div class="subtitle">Analisi Statistica Manipolazioni Turni - Test Matematici Certificati</div>
+        </div>
+        
+        <div class="alert-banner">
+            <span class="icon">🚨</span>
+            <div>
+                <strong>EVIDENZE STATISTICHE RILEVATE:</strong> 
+                4 su 6 staff presentano distribuzione riposi NON casuale (p &lt; 0.05)
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('runs-test')">🎲 Runs Test</button>
+            <button class="tab" onclick="showTab('privilegio')">⚖️ Indici Privilegio</button>
+            <button class="tab" onclick="showTab('sequenze')">😴 Sequenze Riposi</button>
+            <button class="tab" onclick="showTab('comfort')">🎯 Turni Comodi</button>
+            <button class="tab" onclick="showTab('metodologia')">📐 Metodologia</button>
+        </div>
+        
+        <div class="content">
+            <!-- TAB 1: Runs Test -->
+            <div id="runs-test" class="tab-content active">
+                <h2>🎲 Runs Test - Test di Casualità delle Sequenze</h2>
+                
+                <div class="methodology">
+                    <h4>📐 Che cos'è il Runs Test?</h4>
+                    <p><strong>Test statistico matematico</strong> che verifica se una sequenza di eventi (turni/riposi) è casuale o segue un pattern.</p>
+                    <p><strong>Logica</strong>: Se i riposi sono assegnati casualmente, ci dovrebbe essere un certo numero di "runs" (sequenze consecutive). Se i runs sono troppo pochi, significa che i riposi sono troppo raggruppati (NON casuale = possibile manipolazione).</p>
+                    <p><strong>P-value &lt; 0.05</strong> = Distribuzione NON compatibile con casualità (sospetto!)</p>
+                </div>
+                
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <div class="label">Staff con distribuzione SOSPETTA</div>
+                        <div class="value">4/6</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Soglia significatività</div>
+                        <div class="value">p &lt; 0.05</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Tipo anomalia</div>
+                        <div class="value">Riposi Raggruppati</div>
+                    </div>
+                </div>
+                
+                <h3>📊 Risultati Runs Test per Staff</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Runs Osservati</th>
+                            <th>Runs Attesi (Casuale)</th>
+                            <th>Z-score</th>
+                            <th>P-value</th>
+                            <th>Verdetto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight-row">
+                            <td><strong>CIRCELLI</strong></td>
+                            <td>94</td>
+                            <td>112.50</td>
+                            <td>-2.61</td>
+                            <td><strong>0.0090</strong></td>
+                            <td><span class="alert-badge danger">🚨 RIPOSI RAGGRUPPATI!</span></td>
+                        </tr>
+                        <tr>
+                            <td>MORALE</td>
+                            <td>82</td>
+                            <td>85.66</td>
+                            <td>-0.60</td>
+                            <td>0.5482</td>
+                            <td><span class="alert-badge safe">✅ Casuale</span></td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>PACINI</strong></td>
+                            <td>66</td>
+                            <td>80.23</td>
+                            <td>-2.38</td>
+                            <td><strong>0.0174</strong></td>
+                            <td><span class="alert-badge danger">🚨 RIPOSI RAGGRUPPATI!</span></td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>PAGANO</strong></td>
+                            <td>98</td>
+                            <td>113.50</td>
+                            <td>-2.14</td>
+                            <td><strong>0.0324</strong></td>
+                            <td><span class="alert-badge danger">🚨 RIPOSI RAGGRUPPATI!</span></td>
+                        </tr>
+                        <tr>
+                            <td>TAMBERI</td>
+                            <td>96</td>
+                            <td>109.35</td>
+                            <td>-1.91</td>
+                            <td>0.0562</td>
+                            <td><span class="alert-badge safe">✅ Casuale</span></td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>VISSANI</strong></td>
+                            <td>94</td>
+                            <td>108.86</td>
+                            <td>-2.13</td>
+                            <td><strong>0.0334</strong></td>
+                            <td><span class="alert-badge danger">🚨 RIPOSI RAGGRUPPATI!</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="evidence-box">
+                    <h3>🚨 EVIDENZA FORENSE</h3>
+                    <p><strong>4 persone su 6</strong> (66.7%) hanno una distribuzione di riposi <strong>statisticamente incompatibile con il caso</strong>.</p>
+                    <p>I riposi sono troppo <strong>raggruppati/consecutivi</strong> per essere il risultato di un'assegnazione casuale.</p>
+                    <p><strong>Interpretazione legale/HR</strong>: Suggerisce presenza di criteri sistematici (volontari o involontari) nell'assegnazione dei riposi.</p>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="runsChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- TAB 2: Indici Privilegio -->
+            <div id="privilegio" class="tab-content">
+                <h2>⚖️ Indice di Privilegio Globale</h2>
+                
+                <div class="formula-box">
+                    <strong>Formula Matematica:</strong><br>
+                    IP = (% Turni Comodi × 2) + (% Riposi) - (% Weekend) - (% Festivi)<br><br>
+                    Dove:<br>
+                    - Turni Comodi = orario 08:00-10:00 (peso doppio)<br>
+                    - Riposi = giorni di riposo/ferie<br>
+                    - Weekend = penalizzazione<br>
+                    - Festivi = penalizzazione
+                </div>
+                
+                <h3>📊 Ranking Indici Privilegio</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Posizione</th>
+                            <th>Staff</th>
+                            <th>% Turni Comodi</th>
+                            <th>% Riposi</th>
+                            <th>% Weekend</th>
+                            <th>% Festivi</th>
+                            <th>Indice Privilegio</th>
+                            <th>Z-score</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight-row">
+                            <td>🥇 1</td>
+                            <td><strong>PAGANO</strong></td>
+                            <td>0.0%</td>
+                            <td>34.7%</td>
+                            <td>0.0%</td>
+                            <td>0.0%</td>
+                            <td><strong>34.69</strong></td>
+                            <td>+1.34</td>
+                            <td><span class="alert-badge warning">⚠️ Leggermente privilegiato</span></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>VISSANI</td>
+                            <td>0.0%</td>
+                            <td>32.4%</td>
+                            <td>0.0%</td>
+                            <td>0.0%</td>
+                            <td>32.35</td>
+                            <td>+0.26</td>
+                            <td><span class="alert-badge safe">✅ Norma</span></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>TAMBERI</td>
+                            <td>0.0%</td>
+                            <td>32.2%</td>
+                            <td>0.0%</td>
+                            <td>0.0%</td>
+                            <td>32.23</td>
+                            <td>+0.21</td>
+                            <td><span class="alert-badge safe">✅ Norma</span></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>PACINI</td>
+                            <td>0.0%</td>
+                            <td>31.8%</td>
+                            <td>0.0%</td>
+                            <td>0.0%</td>
+                            <td>31.82</td>
+                            <td>+0.02</td>
+                            <td><span class="alert-badge safe">✅ Norma</span></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>CIRCELLI</td>
+                            <td>0.0%</td>
+                            <td>31.6%</td>
+                            <td>0.0%</td>
+                            <td>0.0%</td>
+                            <td>31.60</td>
+                            <td>-0.08</td>
+                            <td><span class="alert-badge safe">✅ Norma</span></td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td>6</td>
+                            <td><strong>MORALE</strong></td>
+                            <td>0.0%</td>
+                            <td>27.9%</td>
+                            <td>0.0%</td>
+                            <td>0.0%</td>
+                            <td><strong>27.92</strong></td>
+                            <td>-1.76</td>
+                            <td><span class="alert-badge warning">⚠️ Leggermente svantaggiato</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="evidence-box warning">
+                    <h3>⚠️ DISPARITÀ RILEVATA</h3>
+                    <p><strong>PAGANO</strong> ha un indice di privilegio 24% superiore a <strong>MORALE</strong>.</p>
+                    <p>Differenza: 34.69 - 27.92 = <strong>6.77 punti</strong></p>
+                    <p>Questo indica una distribuzione leggermente sbilanciata dei turni favorevoli.</p>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="privilegioChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- TAB 3: Sequenze Riposi -->
+            <div id="sequenze" class="tab-content">
+                <h2>😴 Analisi Sequenze Riposi Consecutivi</h2>
+                
+                <h3>📊 Statistiche Riposi Consecutivi</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Riposi Totali</th>
+                            <th>N. Sequenze</th>
+                            <th>Media Giorni/Seq</th>
+                            <th>Max Consecutivi</th>
+                            <th>Sequenze 3+ gg</th>
+                            <th>Sequenze 5+ gg</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>CIRCELLI</td>
+                            <td>85</td>
+                            <td>47</td>
+                            <td>1.81</td>
+                            <td><strong>6</strong></td>
+                            <td>5</td>
+                            <td>2</td>
+                        </tr>
+                        <tr>
+                            <td>MORALE</td>
+                            <td>63</td>
+                            <td>41</td>
+                            <td>1.54</td>
+                            <td>4</td>
+                            <td>3</td>
+                            <td>0</td>
+                        </tr>
+                        <tr>
+                            <td>PACINI</td>
+                            <td>61</td>
+                            <td>33</td>
+                            <td>1.85</td>
+                            <td>5</td>
+                            <td><strong>6</strong></td>
+                            <td>2</td>
+                        </tr>
+                        <tr>
+                            <td>PAGANO</td>
+                            <td>90</td>
+                            <td>49</td>
+                            <td>1.84</td>
+                            <td>5</td>
+                            <td>5</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td>TAMBERI</td>
+                            <td>83</td>
+                            <td>48</td>
+                            <td>1.73</td>
+                            <td><strong>7</strong></td>
+                            <td>4</td>
+                            <td>2</td>
+                        </tr>
+                        <tr>
+                            <td>VISSANI</td>
+                            <td>83</td>
+                            <td>47</td>
+                            <td>1.77</td>
+                            <td><strong>8</strong></td>
+                            <td>4</td>
+                            <td>2</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="evidence-box safe">
+                    <h3>✅ TEST CHI-QUADRATO - Sequenze Lunghe</h3>
+                    <p><strong>Chi-quadrato</strong>: 1.2222</p>
+                    <p><strong>P-value</strong>: 0.9427</p>
+                    <p><strong>Verdetto</strong>: Distribuzione compatibile con casualità</p>
+                    <p>La distribuzione del <em>numero</em> di sequenze lunghe è uniforme, ma il <strong>posizionamento</strong> di queste sequenze non lo è (vedi Runs Test).</p>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="sequenzeChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- TAB 4: Turni Comodi -->
+            <div id="comfort" class="tab-content">
+                <h2>🎯 Analisi Turni Preferenziali (Orari Comodi)</h2>
+                
+                <div class="methodology">
+                    <h4>📐 Classificazione Fasce Orarie</h4>
+                    <ul>
+                        <li><strong>Fascia A (COMODO)</strong>: 08:00-10:00 - Orario ideale</li>
+                        <li><strong>Fascia B (NORMALE)</strong>: 06:00-08:00 o 10:00-12:00 - Orario standard</li>
+                        <li><strong>Fascia C (SCOMODO)</strong>: 04:00-06:00 o dopo 12:00 - Orario difficile</li>
+                    </ul>
+                </div>
+                
+                <h3>📊 Distribuzione Fasce Orarie</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Turni Comodi</th>
+                            <th>Turni Normali</th>
+                            <th>Turni Scomodi</th>
+                            <th>% Comodi</th>
+                            <th>Differenza vs Media</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="highlight-row">
+                            <td><strong>MORALE</strong></td>
+                            <td>49</td>
+                            <td>25</td>
+                            <td>53</td>
+                            <td><strong>38.6%</strong></td>
+                            <td><span class="alert-badge warning">+6.5%</span></td>
+                        </tr>
+                        <tr>
+                            <td>PAGANO</td>
+                            <td>46</td>
+                            <td>25</td>
+                            <td>68</td>
+                            <td>33.1%</td>
+                            <td>+0.9%</td>
+                        </tr>
+                        <tr>
+                            <td>CIRCELLI</td>
+                            <td>51</td>
+                            <td>27</td>
+                            <td>79</td>
+                            <td>32.5%</td>
+                            <td>+0.3%</td>
+                        </tr>
+                        <tr>
+                            <td>PACINI</td>
+                            <td>33</td>
+                            <td>23</td>
+                            <td>53</td>
+                            <td>30.3%</td>
+                            <td>-2.0%</td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>TAMBERI</strong></td>
+                            <td>39</td>
+                            <td>29</td>
+                            <td>86</td>
+                            <td><strong>25.3%</strong></td>
+                            <td><span class="alert-badge warning">-7.0%</span></td>
+                        </tr>
+                        <tr class="highlight-row">
+                            <td><strong>VISSANI</strong></td>
+                            <td>37</td>
+                            <td>21</td>
+                            <td>89</td>
+                            <td><strong>25.2%</strong></td>
+                            <td><span class="alert-badge warning">-7.1%</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="evidence-box warning">
+                    <h3>⚠️ DISPARITÀ ORARI</h3>
+                    <p><strong>MORALE</strong> ottiene il 38.6% di turni comodi</p>
+                    <p><strong>VISSANI</strong> ottiene solo il 25.2% di turni comodi</p>
+                    <p><strong>Differenza</strong>: 13.4 punti percentuali (53% in più per MORALE!)</p>
+                </div>
+                
+                <div class="evidence-box safe">
+                    <h3>✅ TEST CHI-QUADRATO - Distribuzione Orari</h3>
+                    <p><strong>Chi-quadrato</strong>: 6.1059</p>
+                    <p><strong>P-value</strong>: 0.2961</p>
+                    <p><strong>Verdetto</strong>: Distribuzione uniforme - compatibile con casualità</p>
+                    <p>Anche se c'è una differenza del 13%, statisticamente rientra nella variabilità attesa (p > 0.05).</p>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="comfortChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- TAB 5: Metodologia -->
+            <div id="metodologia" class="tab-content">
+                <h2>📐 Metodologia Statistica</h2>
+                
+                <div class="methodology">
+                    <h3>🔒 Garanzia Matematica</h3>
+                    <p><strong>Tutti i calcoli sono eseguiti con Python (scipy/numpy) - ZERO AI</strong></p>
+                    <p>Test statistici certificati e riproducibili utilizzati in ambito scientifico e legale.</p>
+                </div>
+                
+                <h3>📊 Test Statistici Utilizzati</h3>
+                
+                <div class="evidence-box safe">
+                    <h4>1. Runs Test (Test di Wald-Wolfowitz)</h4>
+                    <p><strong>Scopo</strong>: Verifica casualità di una sequenza binaria (turno/riposo)</p>
+                    <p><strong>Formula Z-score</strong>:</p>
+                    <div class="formula-box">
+Z = (R - μ) / σ<br>
+dove:<br>
+μ = (2·n₁·n₀)/(n₁+n₀) + 1<br>
+σ² = (2·n₁·n₀·(2·n₁·n₀-n₁-n₀)) / ((n₁+n₀)²·(n₁+n₀-1))<br>
+R = numero runs osservati<br>
+n₁ = giorni lavoro, n₀ = giorni riposo
+                    </div>
+                    <p><strong>Interpretazione</strong>:</p>
+                    <ul>
+                        <li>Z &lt; -2: Troppo pochi runs → Raggruppamento (NON casuale)</li>
+                        <li>-2 &lt; Z &lt; 2: Compatibile con casualità</li>
+                        <li>Z &gt; 2: Troppi runs → Alternanza eccessiva</li>
+                    </ul>
+                    <p><strong>Soglia significatività</strong>: p &lt; 0.05</p>
+                </div>
+                
+                <div class="evidence-box safe">
+                    <h4>2. Test Chi-quadrato (χ²)</h4>
+                    <p><strong>Scopo</strong>: Verifica se una distribuzione osservata differisce significativamente da quella attesa</p>
+                    <p><strong>Formula</strong>:</p>
+                    <div class="formula-box">
+χ² = Σ[(O_i - E_i)² / E_i]<br>
+dove:<br>
+O_i = frequenza osservata<br>
+E_i = frequenza attesa (uniforme)
+                    </div>
+                    <p><strong>Applicazioni</strong>:</p>
+                    <ul>
+                        <li>Uniformità sequenze lunghe</li>
+                        <li>Distribuzione turni comodi</li>
+                        <li>Weekend e festivi</li>
+                    </ul>
+                    <p><strong>Soglia significatività</strong>: p &lt; 0.05</p>
+                </div>
+                
+                <div class="evidence-box safe">
+                    <h4>3. Z-score (Punteggio Standardizzato)</h4>
+                    <p><strong>Scopo</strong>: Identifica outliers statistici</p>
+                    <p><strong>Formula</strong>:</p>
+                    <div class="formula-box">
+Z = (X - μ) / σ<br>
+dove:<br>
+X = valore osservato<br>
+μ = media<br>
+σ = deviazione standard
+                    </div>
+                    <p><strong>Interpretazione</strong>:</p>
+                    <ul>
+                        <li>|Z| &gt; 2.0: Outlier significativo (2.5% probabilità)</li>
+                        <li>|Z| &gt; 3.0: Outlier estremo (0.3% probabilità)</li>
+                    </ul>
+                </div>
+                
+                <div class="evidence-box safe">
+                    <h4>4. Indice di Privilegio (Custom Metric)</h4>
+                    <p><strong>Scopo</strong>: Misura complessiva del vantaggio/svantaggio nei turni</p>
+                    <p><strong>Formula</strong>:</p>
+                    <div class="formula-box">
+IP = (% Turni Comodi × 2) + % Riposi - % Weekend - % Festivi<br><br>
+Peso doppio per turni comodi perché impattano qualità vita quotidiana<br>
+Penalizzazione per weekend/festivi lavorati
+                    </div>
+                </div>
+                
+                <h3>📄 File Generati</h3>
+                <ul>
+                    <li><strong>REPORT_FORENSE_MANIPOLAZIONE.xlsx</strong>: Report Excel con tutti i dati e test</li>
+                    <li><strong>analisi_statistica_manipolazione.py</strong>: Script Python riproducibile</li>
+                    <li><strong>dashboard_forense.html</strong>: Dashboard interattiva (questo file)</li>
+                </ul>
+                
+                <h3>🔍 Come Verificare i Calcoli</h3>
+                <ol>
+                    <li>Apri il file Excel <code>REPORT_FORENSE_MANIPOLAZIONE.xlsx</code></li>
+                    <li>Esegui lo script Python: <code>python3 analisi_statistica_manipolazione.py</code></li>
+                    <li>Confronta i risultati - sono deterministici e riproducibili</li>
+                    <li>Tutti i test usano libreria scipy (standard scientifico)</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Chart 1: Runs Test Results
+        const runsCtx = document.getElementById('runsChart').getContext('2d');
+        new Chart(runsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['CIRCELLI', 'MORALE', 'PACINI', 'PAGANO', 'TAMBERI', 'VISSANI'],
+                datasets: [{
+                    label: 'Runs Osservati',
+                    data: [94, 82, 66, 98, 96, 94],
+                    backgroundColor: 'rgba(220, 38, 38, 0.7)',
+                    borderColor: 'rgba(220, 38, 38, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Runs Attesi (Casuale)',
+                    data: [112.50, 85.66, 80.23, 113.50, 109.35, 108.86],
+                    backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Runs Test - Osservati vs Attesi (Casuale)',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Numero Runs'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Chart 2: Indici Privilegio
+        const privCtx = document.getElementById('privilegioChart').getContext('2d');
+        new Chart(privCtx, {
+            type: 'bar',
+            data: {
+                labels: ['PAGANO', 'VISSANI', 'TAMBERI', 'PACINI', 'CIRCELLI', 'MORALE'],
+                datasets: [{
+                    label: 'Indice Privilegio',
+                    data: [34.69, 32.35, 32.23, 31.82, 31.60, 27.92],
+                    backgroundColor: [
+                        'rgba(245, 158, 11, 0.7)',
+                        'rgba(34, 197, 94, 0.7)',
+                        'rgba(34, 197, 94, 0.7)',
+                        'rgba(34, 197, 94, 0.7)',
+                        'rgba(34, 197, 94, 0.7)',
+                        'rgba(245, 158, 11, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(245, 158, 11, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Indice di Privilegio per Staff (ordinato)',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Indice Privilegio'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Chart 3: Sequenze Riposi
+        const seqCtx = document.getElementById('sequenzeChart').getContext('2d');
+        new Chart(seqCtx, {
+            type: 'bar',
+            data: {
+                labels: ['CIRCELLI', 'MORALE', 'PACINI', 'PAGANO', 'TAMBERI', 'VISSANI'],
+                datasets: [{
+                    label: 'Sequenze 3+ giorni',
+                    data: [5, 3, 6, 5, 4, 4],
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Sequenze 5+ giorni',
+                    data: [2, 0, 2, 1, 2, 2],
+                    backgroundColor: 'rgba(220, 38, 38, 0.7)',
+                    borderColor: 'rgba(220, 38, 38, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Sequenze Riposi Consecutivi (3+ e 5+ giorni)',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Numero Sequenze'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Chart 4: Turni Comodi
+        const comfCtx = document.getElementById('comfortChart').getContext('2d');
+        new Chart(comfCtx, {
+            type: 'bar',
+            data: {
+                labels: ['MORALE', 'CIRCELLI', 'PAGANO', 'PACINI', 'TAMBERI', 'VISSANI'],
+                datasets: [{
+                    label: '% Turni Comodi',
+                    data: [38.6, 32.5, 33.1, 30.3, 25.3, 25.2],
+                    backgroundColor: function(context) {
+                        const value = context.parsed.y;
+                        if (value > 36) return 'rgba(245, 158, 11, 0.7)';
+                        if (value < 27) return 'rgba(220, 38, 38, 0.7)';
+                        return 'rgba(34, 197, 94, 0.7)';
+                    },
+                    borderColor: function(context) {
+                        const value = context.parsed.y;
+                        if (value > 36) return 'rgba(245, 158, 11, 1)';
+                        if (value < 27) return 'rgba(220, 38, 38, 1)';
+                        return 'rgba(34, 197, 94, 1)';
+                    },
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Percentuale Turni Comodi (08:00-10:00)',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 45,
+                        title: {
+                            display: true,
+                            text: '% Turni Comodi'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

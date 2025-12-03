@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard HR - Analisi Turni 2025</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .guarantee {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            flex-wrap: wrap;
+        }
+        
+        .tab-btn {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: bold;
+        }
+        
+        .tab-btn:hover { color: #667eea; }
+        
+        .tab-content { display: none; animation: fadeIn 0.5s; }
+        .tab-content.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-card h3 {
+            font-size: 14px;
+            margin-bottom: 15px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metric-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .metric-card .subtitle {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .controls {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .controls label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .controls select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        
+        .controls select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        
+        .comparison-grid.header {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .comparison-grid:not(.header):hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        
+        .chart-container {
+            margin: 20px 0;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 5px solid;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-color: #17a2b8;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #dc3545;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Dashboard HR Interattiva</h1>
+            <p style="color: #666; font-size: 18px;">Analisi Turni 2025 - Calcoli Python Certificati</p>
+        </div>
+        
+        <div class="guarantee">
+            <strong>🔒 GARANZIA MATEMATICA</strong>: Tutti i calcoli sono eseguiti con JavaScript Math puro (no AI).
+            Formule deterministiche e verificabili. Stesso input = stesso output sempre.
+        </div>
+        
+        <div id="loadingSection" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 20px; color: #666;">📂 Caricamento dati in corso...</p>
+        </div>
+        
+        <div id="mainContent" style="display: none;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('overview')">📊 Overview</button>
+                <button class="tab-btn" onclick="showTab('confronti')">🔍 Confronti</button>
+                <button class="tab-btn" onclick="showTab('grafici')">📈 Grafici</button>
+                <button class="tab-btn" onclick="showTab('equita')">⚖️ Indici Equità</button>
+                <button class="tab-btn" onclick="showTab('dettaglio')">📋 Dettaglio</button>
+            </div>
+            
+            <!-- TAB 1: OVERVIEW -->
+            <div id="overview" class="tab-content active">
+                <h2 style="color: #333; margin-bottom: 20px;">📊 Overview Generale</h2>
+                
+                <div class="metrics-grid" id="kpiCards"></div>
+                
+                <h3 style="color: #333; margin: 30px 0 15px 0;">📋 Metriche Dettagliate per Staff</h3>
+                <div id="staffTable"></div>
+            </div>
+            
+            <!-- TAB 2: CONFRONTI -->
+            <div id="confronti" class="tab-content">
+                <h2 style="color: #333; margin-bottom: 20px;">🔍 Confronto Tra Staff</h2>
+                
+                <div class="controls">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                        <div>
+                            <label>👤 Staff 1:</label>
+                            <select id="staff1" onchange="updateComparison()"></select>
+                        </div>
+                        <div>
+                            <label>👤 Staff 2:</label>
+                            <select id="staff2" onchange="updateComparison()"></select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="comparisonResult"></div>
+                
+                <div class="chart-container" style="margin-top: 30px;">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- TAB 3: GRAFICI -->
+            <div id="grafici" class="tab-content">
+                <h2 style="color: #333; margin-bottom: 20px;">📈 Visualizzazioni</h2>
+                
+                <div class="chart-container">
+                    <canvas id="oreChart"></canvas>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                    <div class="chart-container">
+                        <canvas id="turniPieChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="riposiChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TAB 4: EQUITÀ -->
+            <div id="equita" class="tab-content">
+                <h2 style="color: #333; margin-bottom: 20px;">⚖️ Indici di Equità</h2>
+                
+                <div class="guarantee">
+                    📐 <strong>Formula Coefficiente di Variazione (CV)</strong>: (Deviazione Standard / Media) × 100<br>
+                    🔢 <strong>Calcolo JavaScript</strong>: Math.sqrt(variance) / mean × 100<br>
+                    ✅ <strong>Matematica pura</strong> - Nessuna IA coinvolta
+                </div>
+                
+                <div id="cvTable"></div>
+                
+                <div style="margin-top: 25px; padding: 20px; background: #e7f3ff; border-radius: 10px; border-left: 5px solid #17a2b8;">
+                    <strong>📖 Come interpretare il CV:</strong><br><br>
+                    <div style="margin-left: 20px;">
+                        • <strong>CV &lt; 10%</strong>: Distribuzione EQUA ✅ (variabilità minima)<br>
+                        • <strong>CV 10-20%</strong>: ACCETTABILE ⚠️ (da monitorare)<br>
+                        • <strong>CV &gt; 20%</strong>: SQUILIBRATO ❌ (serve correzione)
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TAB 5: DETTAGLIO -->
+            <div id="dettaglio" class="tab-content">
+                <h2 style="color: #333; margin-bottom: 20px;">📋 Dati Dettagliati</h2>
+                
+                <div class="controls">
+                    <label>🔍 Filtra per Staff:</label>
+                    <select id="filterStaff" onchange="updateDetail()">
+                        <option value="">📋 Tutti gli Staff</option>
+                    </select>
+                </div>
+                
+                <div id="detailStats" style="margin: 20px 0;"></div>
+                <div id="detailTable"></div>
+                
+                <button class="btn" onclick="downloadCSV()" style="margin-top: 20px;">
+                    📥 Scarica Dati Filtrati (CSV)
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let allData = [];
+        let staffList = [];
+        let charts = {};
+        
+        // Carica dati dal CSV
+        function loadData() {
+            Papa.parse('dati_puliti.csv', {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    // Filtra righe valide
+                    allData = results.data.filter(row => 
+                        row.staff && row.staff.trim() !== '' && row.staff !== 'staff'
+                    );
+                    
+                    staffList = [...new Set(allData.map(r => r.staff))].filter(s => s).sort();
+                    
+                    document.getElementById('loadingSection').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    
+                    console.log(`✅ Dati caricati: ${allData.length} turni, ${staffList.length} staff`);
+                    
+                    initDashboard();
+                },
+                error: function(error) {
+                    document.getElementById('loadingSection').innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>❌ Errore caricamento dati</strong><br>
+                            ${error.message}<br><br>
+                            Assicurati che il file <strong>dati_puliti.csv</strong> sia nella stessa cartella.
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        // Calcola metriche per staff (MATEMATICA JAVASCRIPT PURA)
+        function calcMetrics(staffName) {
+            const data = allData.filter(r => r.staff === staffName);
+            
+            const turniNorm = data.filter(r => r.tipo_turno === 'NORMALE').length;
+            const riposi = data.filter(r => ['RIPO', 'RDOM'].includes(r.tipo_turno)).length;
+            const ferie = data.filter(r => r.tipo_turno === 'FERIOR').length;
+            const off = data.filter(r => ['OFF', 'CHIUSO'].includes(r.tipo_turno)).length;
+            
+            const oreData = data.filter(r => r.ore_lavoro && !isNaN(parseFloat(r.ore_lavoro)));
+            const oreTot = oreData.reduce((sum, r) => sum + parseFloat(r.ore_lavoro), 0);
+            const oreMedia = oreData.length > 0 ? oreTot / turniNorm : 0;
+            
+            return {
+                turni_totali: data.length,
+                turni_normali: turniNorm,
+                riposi: riposi,
+                ferie: ferie,
+                off: off,
+                ore_totali: oreTot,
+                ore_media: oreMedia
+            };
+        }
+        
+        // Calcola CV (FORMULA MATEMATICA PURA)
+        function calculateCV(values) {
+            if (values.length === 0) return 0;
+            
+            const n = values.length;
+            const mean = values.reduce((a, b) => a + b, 0) / n;
+            
+            if (mean === 0) return 0;
+            
+            const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+            const stdDev = Math.sqrt(variance);
+            
+            return (stdDev / mean) * 100;
+        }
+        
+        // Inizializza dashboard
+        function initDashboard() {
+            updateOverview();
+            populateSelects();
+            updateComparison();
+            updateCharts();
+            updateCVTable();
+            updateDetail();
+        }
+        
+        // Aggiorna overview
+        function updateOverview() {
+            // KPI Cards
+            const totalTurni = allData.length;
+            const oreData = allData.filter(r => r.ore_lavoro && !isNaN(parseFloat(r.ore_lavoro)));
+            const totalOre = oreData.reduce((sum, r) => sum + parseFloat(r.ore_lavoro), 0);
+            const settimane = new Set(allData.map(r => r.settimana).filter(s => s)).size;
+            
+            document.getElementById('kpiCards').innerHTML = `
+                <div class="metric-card">
+                    <h3>Turni Totali</h3>
+                    <div class="value">${totalTurni}</div>
+                    <div class="subtitle">Tutti i turni analizzati</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Ore Totali</h3>
+                    <div class="value">${totalOre.toFixed(1)}h</div>
+                    <div class="subtitle">Somma JavaScript Math</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Settimane</h3>
+                    <div class="value">${settimane}</div>
+                    <div class="subtitle">Periodo analizzato</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Staff</h3>
+                    <div class="value">${staffList.length}</div>
+                    <div class="subtitle">Persone attive</div>
+                </div>
+            `;
+            
+            // Tabella staff
+            let html = '<table><thead><tr>';
+            html += '<th>Staff</th><th>Turni Tot</th><th>Turni Norm</th><th>Riposi</th><th>Ferie</th><th>Ore Totali</th><th>Media h/turno</th>';
+            html += '</tr></thead><tbody>';
+            
+            staffList.forEach(staff => {
+                const m = calcMetrics(staff);
+                html += `
+                    <tr>
+                        <td><strong>${staff}</strong></td>
+                        <td>${m.turni_totali}</td>
+                        <td>${m.turni_normali}</td>
+                        <td>${m.riposi}</td>
+                        <td>${m.ferie}</td>
+                        <td><strong>${m.ore_totali.toFixed(1)}h</strong></td>
+                        <td>${m.ore_media.toFixed(2)}h</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('staffTable').innerHTML = html;
+        }
+        
+        // Popola select
+        function populateSelects() {
+            const opts = staffList.map(s => `<option value="${s}">${s}</option>`).join('');
+            document.getElementById('staff1').innerHTML = opts;
+            document.getElementById('staff2').innerHTML = opts;
+            document.getElementById('filterStaff').innerHTML = '<option value="">Tutti</option>' + opts;
+            
+            if (staffList.length > 1) {
+                document.getElementById('staff2').selectedIndex = 1;
+            }
+        }
+        
+        // Aggiorna confronto
+        function updateComparison() {
+            const s1 = document.getElementById('staff1').value;
+            const s2 = document.getElementById('staff2').value;
+            
+            if (!s1 || !s2 || s1 === s2) {
+                document.getElementById('comparisonResult').innerHTML = 
+                    '<div class="alert alert-warning">⚠️ Seleziona due staff diversi</div>';
+                return;
+            }
+            
+            const m1 = calcMetrics(s1);
+            const m2 = calcMetrics(s2);
+            
+            let html = `
+                <h3 style="margin: 25px 0 15px 0; color: #333;">📊 ${s1} vs ${s2}</h3>
+                <div class="comparison-grid header">
+                    <div>Metrica</div><div>${s1}</div><div>${s2}</div><div>Diff</div><div>Diff %</div><div>Status</div>
+                </div>
+            `;
+            
+            const metriche = [
+                ['Ore Totali', 'ore_totali'],
+                ['Turni Normali', 'turni_normali'],
+                ['Riposi', 'riposi'],
+                ['Ferie', 'ferie']
+            ];
+            
+            let disparita = 0;
+            
+            metriche.forEach(([label, key]) => {
+                const v1 = m1[key];
+                const v2 = m2[key];
+                const diff = v1 - v2;
+                const perc = v2 !== 0 ? (diff / v2) * 100 : 0;
+                
+                let badge, badgeClass;
+                if (Math.abs(perc) < 10) {
+                    badge = '✅ Equo';
+                    badgeClass = 'badge-success';
+                } else if (Math.abs(perc) < 20) {
+                    badge = '⚠️ Attenzione';
+                    badgeClass = 'badge-warning';
+                    disparita++;
+                } else {
+                    badge = '❌ Squilibrato';
+                    badgeClass = 'badge-danger';
+                    disparita += 2;
+                }
+                
+                html += `
+                    <div class="comparison-grid">
+                        <div><strong>${label}</strong></div>
+                        <div>${v1.toFixed(1)}</div>
+                        <div>${v2.toFixed(1)}</div>
+                        <div style="font-weight: bold;">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</div>
+                        <div>${perc > 0 ? '+' : ''}${perc.toFixed(2)}%</div>
+                        <div><span class="badge ${badgeClass}">${badge}</span></div>
+                    </div>
+                `;
+            });
+            
+            // Conclusione
+            let conclusione = '';
+            if (disparita === 0) {
+                conclusione = '<div class="alert alert-success"><strong>✅ DISTRIBUZIONE EQUA</strong><br>Tutte le metriche entro margini accettabili (&lt;10%)</div>';
+            } else if (disparita <= 2) {
+                conclusione = `<div class="alert alert-warning"><strong>⚠️ LEGGERO SQUILIBRIO</strong><br>${disparita} metriche con differenze 10-20%</div>`;
+            } else {
+                conclusione = `<div class="alert alert-danger"><strong>❌ SQUILIBRIO SIGNIFICATIVO</strong><br>${disparita} metriche con differenze &gt;20% - richiede attenzione</div>`;
+            }
+            
+            html += conclusione;
+            document.getElementById('comparisonResult').innerHTML = html;
+            
+            // Grafico radar
+            updateRadarChart(s1, s2, m1, m2);
+        }
+        
+        // Grafico radar
+        function updateRadarChart(s1, s2, m1, m2) {
+            const ctx = document.getElementById('radarChart');
+            
+            if (charts.radar) charts.radar.destroy();
+            
+            charts.radar = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Turni Normali', 'Riposi', 'Ferie', 'OFF'],
+                    datasets: [
+                        {
+                            label: s1,
+                            data: [m1.turni_normali, m1.riposi, m1.ferie, m1.off],
+                            fill: true,
+                            backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                            borderColor: 'rgb(102, 126, 234)',
+                            pointBackgroundColor: 'rgb(102, 126, 234)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(102, 126, 234)'
+                        },
+                        {
+                            label: s2,
+                            data: [m2.turni_normali, m2.riposi, m2.ferie, m2.off],
+                            fill: true,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgb(255, 99, 132)',
+                            pointBackgroundColor: 'rgb(255, 99, 132)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(255, 99, 132)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Confronto Multi-dimensionale: ${s1} vs ${s2}`,
+                            font: { size: 18 }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Aggiorna grafici
+        function updateCharts() {
+            // Ore per staff
+            const orePerStaff = {};
+            staffList.forEach(staff => {
+                const m = calcMetrics(staff);
+                orePerStaff[staff] = m.ore_totali;
+            });
+            
+            const ctx1 = document.getElementById('oreChart');
+            charts.ore = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(orePerStaff),
+                    datasets: [{
+                        label: 'Ore Totali',
+                        data: Object.values(orePerStaff),
+                        backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                        borderColor: 'rgb(102, 126, 234)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Ore Lavorate per Staff (Calcolo JavaScript Math.reduce)',
+                            font: { size: 18 }
+                        },
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Ore' }
+                        }
+                    }
+                }
+            });
+            
+            // Torta turni
+            const turniPerStaff = {};
+            staffList.forEach(staff => {
+                turniPerStaff[staff] = allData.filter(r => r.staff === staff).length;
+            });
+            
+            const ctx2 = document.getElementById('turniPieChart');
+            charts.turni = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(turniPerStaff),
+                    datasets: [{
+                        data: Object.values(turniPerStaff),
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', 
+                            '#4BC0C0', '#9966FF', '#FF9F40'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribuzione Turni per Staff',
+                            font: { size: 16 }
+                        }
+                    }
+                }
+            });
+            
+            // Riposi
+            const riposiPerStaff = {};
+            staffList.forEach(staff => {
+                const m = calcMetrics(staff);
+                riposiPerStaff[staff] = m.riposi;
+            });
+            
+            const ctx3 = document.getElementById('riposiChart');
+            charts.riposi = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(riposiPerStaff),
+                    datasets: [{
+                        label: 'Giorni di Riposo',
+                        data: Object.values(riposiPerStaff),
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Giorni di Riposo per Staff',
+                            font: { size: 16 }
+                        },
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Giorni' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Tabella CV
+        function updateCVTable() {
+            const metriche = ['ore_totali', 'turni_normali', 'riposi', 'ferie'];
+            const labels = ['Ore Totali', 'Turni Normali', 'Riposi', 'Ferie'];
+            
+            let html = '<table><thead><tr><th>Metrica</th><th>Media</th><th>Std Dev</th><th>CV (%)</th><th>Status</th></tr></thead><tbody>';
+            
+            metriche.forEach((metrica, idx) => {
+                const values = staffList.map(staff => calcMetrics(staff)[metrica]);
+                
+                const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+                const stdDev = Math.sqrt(variance);
+                const cv = mean > 0 ? (stdDev / mean) * 100 : 0;
+                
+                let status, badgeClass;
+                if (cv < 10) {
+                    status = '✅ OTTIMO';
+                    badgeClass = 'badge-success';
+                } else if (cv < 20) {
+                    status = '⚠️ ACCETTABILE';
+                    badgeClass = 'badge-warning';
+                } else {
+                    status = '❌ SQUILIBRATO';
+                    badgeClass = 'badge-danger';
+                }
+                
+                html += `
+                    <tr>
+                        <td><strong>${labels[idx]}</strong></td>
+                        <td>${mean.toFixed(2)}</td>
+                        <td>${stdDev.toFixed(2)}</td>
+                        <td><strong>${cv.toFixed(2)}%</strong></td>
+                        <td><span class="badge ${badgeClass}">${status}</span></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('cvTable').innerHTML = html;
+        }
+        
+        // Aggiorna dettaglio
+        function updateDetail() {
+            const filter = document.getElementById('filterStaff').value;
+            const filtered = filter ? allData.filter(r => r.staff === filter) : allData;
+            
+            // Statistiche
+            const oreData = filtered.filter(r => r.ore_lavoro && !isNaN(parseFloat(r.ore_lavoro)));
+            const totOre = oreData.reduce((sum, r) => sum + parseFloat(r.ore_lavoro), 0);
+            
+            document.getElementById('detailStats').innerHTML = `
+                <div class="alert alert-info">
+                    📊 <strong>Statistiche visualizzate</strong>: ${filtered.length} turni, 
+                    ${totOre.toFixed(1)} ore totali
+                </div>
+            `;
+            
+            // Tabella (primi 100)
+            let html = '<table><thead><tr><th>Staff</th><th>Settimana</th><th>Tipo</th><th>Ore</th><th>Entrata</th><th>Uscita</th></tr></thead><tbody>';
+            
+            filtered.slice(0, 100).forEach(row => {
+                html += `
+                    <tr>
+                        <td><strong>${row.staff || '-'}</strong></td>
+                        <td>${row.settimana || '-'}</td>
+                        <td>${row.tipo_turno || '-'}</td>
+                        <td>${row.ore_lavoro ? parseFloat(row.ore_lavoro).toFixed(1) : '-'}</td>
+                        <td>${row.ora_entrata || '-'}</td>
+                        <td>${row.ora_uscita || '-'}</td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length > 100) {
+                html += `<tr><td colspan="6" style="text-align: center; color: #666; padding: 20px;">
+                    ... e altri ${filtered.length - 100} turni (scarica CSV per vederli tutti)
+                </td></tr>`;
+            }
+            
+            html += '</tbody></table>';
+            document.getElementById('detailTable').innerHTML = html;
+        }
+        
+        // Download CSV
+        function downloadCSV() {
+            const filter = document.getElementById('filterStaff').value;
+            const filtered = filter ? allData.filter(r => r.staff === filter) : allData;
+            
+            const csv = Papa.unparse(filtered);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `turni_${filter || 'tutti'}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Mostra tab
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Avvia al caricamento pagina
+        window.onload = loadData;
+    </script>
+</body>
+</html>
+

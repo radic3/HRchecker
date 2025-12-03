@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Dati sensibili (NON censurati)
+dati_arricchiti.csv
+dati_puliti.csv
+Tutti*.csv
+Tutti*.xlsx
+*_NON_CENSURATO*
+
+# PDF originali con nomi completi
+*.pdf
+
+# Report con nomi completi
+REPORT_*.xlsx
+*_COMPLETO.xlsx
+analisi_*.xlsx
+
+# Logs e temp
+*.log
+*.tmp
+/tmp/
+.pytest_cache/
+
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# Backup
+*.bak
+*.backup
+*~
+
+# File specifici da NON committare
+SINTESI_FORENSE.txt
+FINDINGS_HR_CRITICHE.md
+RIEPILOGO_*.txt
+REPORT_FINALE_HR.txt
+
